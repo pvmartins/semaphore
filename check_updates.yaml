@@ -1,0 +1,32 @@
+---
+- name: Check if system requires updates
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Detect Linux distribution
+      ansible.builtin.debug:
+        msg: "Detected OS: {{ ansible_distribution }} {{ ansible_distribution_major_version }}"
+
+    - name: Check updates on Debian/Ubuntu
+      ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -v "Listing"
+      register: debian_updates
+      changed_when: false
+      when: ansible_os_family == "Debian"
+
+    - name: Check updates on RHEL/CentOS/Fedora
+      ansible.builtin.shell: dnf check-update || true
+      register: redhat_updates
+      changed_when: false
+      when: ansible_os_family == "RedHat"
+
+    - name: Display pending updates for Debian systems
+      ansible.builtin.debug:
+        var: debian_updates.stdout_lines
+      when: ansible_os_family == "Debian"
+
+    - name: Display pending updates for RedHat systems
+      ansible.builtin.debug:
+        var: redhat_updates.stdout_lines
+      when: ansible_os_family == "RedHat"
