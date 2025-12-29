@@ -2,7 +2,8 @@
 - name: Check and install system updates
   hosts: servers
   become: yes
-  gather_facts: yes
+  become_method: sudo
+  gather_facts: no
 
   tasks:
     - name: Display detected OS
