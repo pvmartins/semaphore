@@ -1,0 +1,14 @@
+---
+- name: Verify execution context
+  hosts: servers
+  remote_user: paulo
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check effective user
+      ansible.builtin.command: whoami
+      register: who
+
+    - ansible.builtin.debug:
+        msg: "Effective user is {{ who.stdout }}"
