@@ -1,0 +1,9 @@
+tasks:
+    - name: Verify sudo access
+      ansible.builtin.command: whoami
+      become: yes
+      register: user_output
+
+    - name: Show the user
+      ansible.builtin.debug:
+        msg: "I am running as user: {{ user_output.stdout }}"
