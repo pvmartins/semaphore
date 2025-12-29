@@ -1,16 +1,14 @@
 ---
 - name: Check and install system updates
   hosts: servers
-  become: yes
-  become_method: sudo
-  gather_facts: yes
+  become: true
+  gather_facts: true
 
   tasks:
     - name: Display detected OS
       ansible.builtin.debug:
         msg: "Detected {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
-    # Debian / Ubuntu systems
     - name: Update apt package cache
       ansible.builtin.apt:
         update_cache: yes
