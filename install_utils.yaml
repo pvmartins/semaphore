@@ -1,0 +1,43 @@
+---
+# File: utils_packages.yml
+# Description: Installs general utility, networking, and development packages.
+
+- name: Install Utility Packages
+  hosts: all
+  become: yes  # Run tasks with root privileges
+
+  vars:
+    utils_packages:
+      - curl
+      - wget
+      - docker.io
+      - docker-compose
+      - smbclient
+      - cifs-utils
+      - nfs-common
+      - git
+      - libpam-google-authenticator
+
+  tasks:
+    - name: Ensure Tailscale is installed (specific to its installation process)
+      # Tailscale usually requires a specific setup. This task uses the generic package name 
+      # which would be installed if the repository was already configured. 
+      # A full setup would require adding the Tailscale GPG key and APT repository first.
+      apt:
+        name: tailscale
+        state: present
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      
+    - name: Install the list of utility packages
+      ansible.builtin.apt:
+        name: "{{ utils_packages }}"
+        state: present
+        
+    - name: Start and enable Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes

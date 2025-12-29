@@ -1,0 +1,44 @@
+---
+- name: Update Tailscale to latest version
+  hosts: servers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Display detected OS
+      ansible.builtin.debug:
+        msg: "Updating Tailscale on {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    #######################################################################
+    # Debian / Ubuntu
+    #######################################################################
+    - name: Ensure apt cache is updated (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Update Tailscale (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: tailscale
+        state: latest
+      when: ansible_os_family == "Debian"
+
+    #######################################################################
+    # Service management
+    #######################################################################
+    - name: Restart Tailscale service
+      ansible.builtin.service:
+        name: tailscaled
+        state: restarted
+        enabled: yes
+
+    - name: Wait until Tailscale is ready
+      ansible.builtin.wait_for:
+        path: /var/run/tailscale/tailscaled.sock
+        state: present
+        timeout: 30
+
+    - name: Verify Tailscale status
+      ansible.builtin.command: tailscale status
+      register: tailscale_status
+      changed_when: false

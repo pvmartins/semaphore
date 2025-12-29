@@ -1,0 +1,40 @@
+---
+- name: Restart Docker container and check health
+  hosts: servers
+  become: yes
+  gather_facts: yes
+
+  vars:
+    container_name: open-webui
+    container_port: 8080
+    container_ip: 192.168.2.20   # replace with the actual IP of the host
+
+  tasks:
+
+    - name: Stop the container if running
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: stopped
+
+    - name: Start the container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: started
+
+    - name: Wait for a few seconds to allow container to initialize
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Check if the web page is up
+      ansible.builtin.uri:
+        url: "http://{{ container_ip }}:{{ container_port }}"
+        return_content: yes
+        status_code: 200
+      register: web_check
+      retries: 5
+      delay: 5
+      until: web_check.status == 200
+
+    - name: Display web page check result
+      ansible.builtin.debug:
+        msg: "Web page is up and running: {{ web_check.status }}"

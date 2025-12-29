@@ -1,0 +1,92 @@
+---
+- name: Install and Configure Wazuh Agent
+  hosts: servers # Replace with your target host group
+  become: yes # Use sudo on the target host
+
+  vars:
+    wazuh_manager_ip: '192.168.2.236'
+    wazuh_agent_group: 'default'
+    wazuh_agent_name: '{{ inventory_hostname }}'
+    wazuh_package_url: 'https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.14.1-1_amd64.deb'
+    wazuh_package_name: "{{ wazuh_package_url | basename }}"
+    local_download_path: '/tmp/{{ wazuh_package_name }}'
+
+  pre_tasks:
+    - name: Set fact - Check if Wazuh Agent is currently installed
+      ansible.builtin.package_facts:
+        manager: auto
+      # This task checks the current state of packages on the target host
+
+    - name: Purge previously installed Wazuh Agent package and configuration
+      when: "'wazuh-agent' in ansible_facts.packages"
+      block:
+        - name: Stop Wazuh Agent service before removal
+          ansible.builtin.service:
+            name: wazuh-agent
+            state: stopped
+            enabled: no
+          ignore_errors: yes # Ignore if the service is not running or doesn't exist
+
+        - name: Purge package and config files
+          ansible.builtin.apt:
+            name: wazuh-agent
+            state: absent
+            purge: yes # Use purge to also remove configuration files
+          when: ansible_facts.distribution in ['Debian', 'Ubuntu']
+          
+        - name: Clean up remaining files in /var/ossec
+          ansible.builtin.file:
+            path: /var/ossec
+            state: absent
+          # This removes the agent's ID and all local configuration, forcing a fresh registration
+
+        - name: Reload systemd daemon
+          ansible.builtin.systemd_service:
+            daemon_reload: yes
+            
+        - name: NOTE - Manual Manager Key Removal Required (if agent was active)
+          ansible.builtin.debug:
+            msg: |
+              A previous agent was found and purged. You should manually remove the
+              old agent key from the Wazuh Manager using the API or CLI 
+              (e.g., 'manage_agents' utility) before proceeding.
+              The Agent ID for '{{ inventory_hostname }}' is now free for reuse.
+              
+  tasks:
+    # --- 1. DOWNLOAD THE PACKAGE ---
+    - name: Ensure /tmp directory exists (for download)
+      ansible.builtin.file:
+        path: /tmp
+        state: directory
+
+    - name: Download the Wazuh Agent .deb package
+      ansible.builtin.get_url:
+        url: "{{ wazuh_package_url }}"
+        dest: "{{ local_download_path }}"
+        mode: '0644'
+        validate_certs: yes
+
+    # --- 2. INSTALL THE AGENT ---
+    - name: Install the Wazuh Agent using apt (dpkg)
+      ansible.builtin.apt:
+        deb: "{{ local_download_path }}"
+      register: dpkg_install_status
+
+    # --- 3. CONFIGURE AGENT AND SETTINGS ---
+    - name: Configure Wazuh Manager, Group, and Name
+      ansible.builtin.shell: >
+        WAZUH_MANAGER={{ wazuh_manager_ip }} 
+        WAZUH_AGENT_GROUP={{ wazuh_agent_group }} 
+        WAZUH_AGENT_NAME={{ wazuh_agent_name }} 
+        dpkg-reconfigure wazuh-agent
+      args:
+        # Only run if the package was newly installed/changed
+        creates: /etc/wazuh-agent/ossec.conf
+      when: dpkg_install_status is changed
+
+    # --- 4. START SERVICE ---
+    - name: Ensure Wazuh Agent service is enabled and started
+      ansible.builtin.service:
+        name: wazuh-agent
+        enabled: yes
+        state: started

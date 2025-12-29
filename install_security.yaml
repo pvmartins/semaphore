@@ -1,0 +1,42 @@
+---
+# File: security_packages.yml
+# Description: Installs security monitoring, hardening, and network diagnostic packages.
+
+- name: Install Security Packages
+  hosts: all
+  become: yes # Run tasks with root privileges
+
+  vars:
+    security_packages:
+      - fail2ban
+      - clamav
+      - ufw
+      - lynis
+      - rkhunter
+      - snort
+      - unattended-upgrades
+      - net-tools
+      - nmap
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      
+    - name: Install the list of security packages
+      ansible.builtin.apt:
+        name: "{{ security_packages }}"
+        state: present
+
+    - name: Ensure Fail2Ban service is running and enabled
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - fail2ban
+ 
+    - name: Run Rkhunter update and check (Initial execution)
+      ansible.builtin.command: rkhunter --update --checkall
+      args:
+        warn: false # Prevents Ansible from warning about running commands without 'creates' or 'removes'

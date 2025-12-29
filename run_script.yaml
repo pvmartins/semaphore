@@ -1,0 +1,19 @@
+---
+- name: Execute a local shell script on remote hosts
+  hosts: test # Change to your target group (e.g., webservers)
+  become: yes # Use sudo on the remote host if needed by the script
+
+  tasks:
+    - name: Run my_setup.sh script on the remote node
+      ansible.builtin.script:
+        # Path to the script on the Ansible Control Node
+        cmd: /Users/paulomartins/Documents/Homelab/linux-scripts/install_wazuh.sh
+      
+      # Optional: You can register the output to check its results
+      register: script_output
+
+    - name: Display script output (stdout and stderr)
+      ansible.builtin.debug:
+        msg: |
+          STDOUT: {{ script_output.stdout }}
+          STDERR: {{ script_output.stderr }}

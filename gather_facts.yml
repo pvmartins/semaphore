@@ -1,0 +1,29 @@
+---
+- name: Gather and display system facts
+  hosts: test
+  gather_facts: yes  # enables automatic fact collection
+  become: no
+
+  tasks:
+    - name: Display the operating system
+      ansible.builtin.debug:
+        msg: "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Display CPU and memory information
+      ansible.builtin.debug:
+        msg:
+          - "CPU cores: {{ ansible_processor_vcpus }}"
+          - "Total RAM (MB): {{ ansible_memtotal_mb }}"
+
+    - name: Display network interfaces
+      ansible.builtin.debug:
+        var: ansible_interfaces
+
+    - name: Show default IPv4 address
+      ansible.builtin.debug:
+        msg: "Main IP: {{ ansible_default_ipv4.address }}"
+
+#    - name: Show full fact set (optional)
+#      ansible.builtin.debug:
+#        var: ansible_facts
+#      tags: detailed
