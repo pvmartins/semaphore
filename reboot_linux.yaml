@@ -4,9 +4,14 @@
   become: yes             # Required to run the reboot command
   gather_facts: no        # Optional: Set to 'no' to skip the error you had earlier
 
-  tasks:
-    - name: Unconditionally reboot the machine
-      ansible.builtin.reboot:
-        reboot_timeout: 3600    # Wait up to 1 hour for the server to return
-        post_reboot_delay: 30   # Wait 30 seconds after it's back before finishing
-        test_command: whoami    # Run this to confirm the system is ready
+- name: Force reboot using shell
+      ansible.builtin.shell: "sleep 2 && reboot"
+      become: yes
+      async: 1
+      poll: 0
+      ignore_unreachable: true
+
+    - name: Wait for server to come back
+      ansible.builtin.wait_for_connection:
+        delay: 30
+        timeout: 300
