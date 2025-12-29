@@ -1,17 +1,9 @@
 ---
-- name: Reboot Linux Servers
+- name: Reboot Ubuntu servers
   hosts: servers
-  become: yes             # Required to run the reboot command
-  gather_facts: no        # Optional: Set to 'no' to skip the error you had earlier
-
-- name: Force reboot using shell
-      ansible.builtin.shell: "sleep 2 && reboot"
-      become: yes
-      async: 1
-      poll: 0
-      ignore_unreachable: true
-
-    - name: Wait for server to come back
-      ansible.builtin.wait_for_connection:
-        delay: 30
-        timeout: 300
+  become: true
+  tasks:
+    - name: Reboot the server
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+        test_command: whoami
