@@ -1,0 +1,45 @@
+---
+- name: Check and install system updates
+  hosts: servers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Display detected OS
+      ansible.builtin.debug:
+        msg: "Detected {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    # Debian / Ubuntu systems
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Upgrade all packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: yes
+      when: ansible_os_family == "Debian"
+
+    # RedHat / CentOS / Fedora systems
+    - name: Make sure dnf/yum cache is up-to-date
+      ansible.builtin.command: dnf makecache
+      register: dnf_cache
+      changed_when: "'Metadata cache created' in dnf_cache.stdout"
+      when: ansible_os_family == "RedHat"
+
+    - name: Upgrade all packages (RedHat/CentOS/Fedora)
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat"
+
+    - name: Reboot if kernel or system update was applied
+      ansible.builtin.reboot:
+        msg: "System reboot initiated by Ansible after updates"
+        reboot_timeout: 120       # Wait at most 2 minutes
+        connect_timeout: 10       # SSH connection timeout
+        pre_reboot_delay: 5
+        post_reboot_delay: 10     # Wait a bit before checking SSH
+        test_command: whoami      # Command to verify system is back
+
